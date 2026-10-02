@@ -1,38 +1,52 @@
 import { createLoadSkillTool } from 'src/engine/core-modules/tool-provider/tools/load-skill.tool';
-import { type FlatSkill } from 'src/engine/metadata-modules/flat-skill/types/flat-skill.type';
+
+const mockAvailableSkillNames = ['workflow-building', 'data-manipulation'];
 
 describe('createLoadSkillTool', () => {
-  it('projects canonical skill documents to Markdown', async () => {
-    const tool = createLoadSkillTool(
-      async () => [
-        {
-          name: 'sales-playbook',
-          label: 'Sales playbook',
-          content: JSON.stringify({
-            type: 'doc',
-            attrs: { schemaVersion: 1 },
-            content: [
-              {
-                type: 'paragraph',
-                content: [{ type: 'text', text: 'Qualify the account.' }],
-              },
-            ],
-          }),
-        } as FlatSkill,
-      ],
-      async () => [],
-    );
+  it('returns a helpful message when skillNames is missing', async () => {
+    const loadSkills = jest.fn();
+    const listAvailableSkillNames = jest
+      .fn()
+      .mockResolvedValue(mockAvailableSkillNames);
+    const tool = createLoadSkillTool(loadSkills, listAvailableSkillNames);
 
-    await expect(
-      tool.execute({ skillNames: ['sales-playbook'] }),
-    ).resolves.toMatchObject({
+    const result = await tool.execute({} as never);
+
+    expect(loadSkills).not.toHaveBeenCalled();
+    expect(listAvailableSkillNames).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      skills: [],
+      message:
+        'Invalid load_skills arguments. Expected { "skillNames": ["workflow-building", "data-manipulation"] }. Available skills: workflow-building, data-manipulation.',
+    });
+  });
+
+  it('loads skills by name', async () => {
+    const loadSkills = jest.fn().mockResolvedValue([
+      {
+        name: 'workflow-building',
+        label: 'Workflow Building',
+        content: 'Workflow instructions',
+      },
+    ]);
+    const listAvailableSkillNames = jest.fn();
+    const tool = createLoadSkillTool(loadSkills, listAvailableSkillNames);
+
+    const result = await tool.execute({
+      skillNames: ['workflow-building'],
+    });
+
+    expect(loadSkills).toHaveBeenCalledWith(['workflow-building']);
+    expect(listAvailableSkillNames).not.toHaveBeenCalled();
+    expect(result).toEqual({
       skills: [
         {
-          name: 'sales-playbook',
-          label: 'Sales playbook',
-          content: 'Qualify the account.',
+          name: 'workflow-building',
+          label: 'Workflow Building',
+          content: 'Workflow instructions',
         },
       ],
+      message: 'Loaded Workflow Building',
     });
   });
 });

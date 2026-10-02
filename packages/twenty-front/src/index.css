@@ -63,3 +63,7 @@ form {
 .grecaptcha-badge {
   visibility: hidden !important;
 }
+
+.repository.file.list {
+  box-shadow: none !important;
+}

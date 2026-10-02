@@ -35,7 +35,22 @@ export const createLoadSkillTool = (
     'Load specialized skills for complex tasks. Returns detailed step-by-step instructions for building workflows, dashboards, manipulating data, or managing metadata. Call this before attempting complex operations.',
   inputSchema: loadSkillInputSchema,
   execute: async (parameters: LoadSkillInput): Promise<LoadSkillResult> => {
-    const { skillNames } = parameters;
+    const parsedParameters = loadSkillInputSchema.safeParse(parameters);
+
+    if (!parsedParameters.success) {
+      const availableNames = await listAvailableSkillNames();
+      const availableMessage =
+        availableNames.length > 0
+          ? `Available skills: ${availableNames.join(', ')}.`
+          : 'No skills are currently available in this workspace.';
+
+      return {
+        skills: [],
+        message: `Invalid load_skills arguments. Expected { "skillNames": ["workflow-building", "data-manipulation"] }. ${availableMessage}`,
+      };
+    }
+
+    const { skillNames } = parsedParameters.data;
 
     const skills = await loadSkills(skillNames);
 
